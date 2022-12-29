@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.test.esh.mapper.UserMapper">
+
+	<resultMap id="UserResultMap" type="UserDTO">
+		<result property="userId" 			column="USER_ID"/>
+		<result property="userPw" 			column="USER_PW"/>
+		<result property="userFirstName" 	column="USER_FIRST_NAME"/>
+		<result property="userMiddleName" 	column="USER_MIDDLE_NAME"/>
+		<result property="userName" 		column="USER_NAME"/>
+		<result property="userDept" 		column="USER_DEPT"/>
+		<result property="userPosition" 	column="USER_POSITION"/>
+		<result property="userRank" 		column="USER_RANK"/>
+		<result property="userPhone" 		column="USER_PHONE"/>
+		<result property="userHomePhone" 	column="USER_HOME_PHONE"/>
+		<result property="userZipCode"		column="USER_ZIP_CODE"/>
+		<result property="userAddr"			column="USER_ADDR"/>
+		<result property="userAddrDetail"	column="USER_ADDR_DETAIL"/>
+		<result property="userEmail" 		column="USER_EMAIL"/>
+	</resultMap>
+	
+	<resultMap id="DeptResultMap" 		type="DeptDTO">
+		<result property="deptNum" 		column="DEPT_NUM"/>
+		<result property="deptName" 	column="DEPT_NAME"/>
+	</resultMap>
+	
+	<resultMap id="PositionResultMap" 	type="PositionDTO">
+		<result property="positionNum" 		column="POSITION_NUM"/>
+		<result property="positionName" 	column="POSITION_NAME"/>
+	</resultMap>
+	
+	<resultMap id="RankResultMap" 		type="RankDTO">
+		<result property="rankNum" 		column="RANK_NUM"/>
+		<result property="rankName" 	column="RANK_NAME"/>
+	</resultMap>
+	
+	<select id="getUserList" resultMap="UserResultMap">
+		<![CDATA[
+		-- 사용자 목록 가져오기
+		SELECT 
+			user_id,
+			user_dept,
+			user_name,
+			user_rank,
+			user_position,
+			user_email,
+			CASE WHEN user_phone NOT LIKE '%-%' THEN REGEXP_REPLACE(user_phone, '(02|.{3})(.+)(.{4})', '\1-\2-\3')
+   			ELSE user_phone END AS user_phone
+		FROM
+		    (
+		        SELECT /*+ INDEX(T1 PK1) */
+		            ROWNUM AS RNUM, u.*
+		        FROM
+		            (SELECT * FROM TB_USER ORDER BY user_name) u
+		        WHERE
+		            ROWNUM <= #{end}
+		    )
+		WHERE
+		    #{start} <= RNUM
+		]]>
+	</select>
+	
+	<select id="getDeptList" resultMap="DeptResultMap">
+		-- 부서 가져오기
+		SELECT
+			*
+		FROM TB_DEPT
+	</select>
+	
+	<select id="getPositionList" resultMap="PositionResultMap">
+		-- 직책 가져오기
+		SELECT
+			*
+		FROM TB_POSITION
+		ORDER BY position_num DESC
+	</select>
+	
+	<select id="getRankList" resultMap="RankResultMap">
+		-- 직급 가져오기
+		SELECT
+			*
+		FROM TB_RANK
+		ORDER BY rank_num DESC
+	</select>
+	
+	<insert id="setUser">
+		-- 사용자 등록
+		INSERT INTO tb_user(
+		    user_first_name,
+		    user_middle_name,
+		    user_name,
+		    user_id,
+		    user_pw,
+		    user_phone,
+		    user_home_phone,
+		    user_email,
+		    user_zip_code,
+		    user_addr,
+		    user_addr_detail,
+		    user_dept,
+		    user_rank,
+		    user_position
+		)VALUES(
+		    #{userFirstName},
+		    #{userMiddleName},
+		    #{userFirstName} || #{userMiddleName},
+		    #{userId},
+		    #{userPw},
+		    #{userPhone},
+		    #{userHomePhone},
+		    #{userEmail},
+		    #{userZipCode},
+		    #{userAddr},
+		    #{userAddrDetail},
+		    #{userDept},
+		    #{userRank},
+		    #{userPosition}
+		)
+	</insert>
+	
+	<select id="getSearchUserList" resultMap="UserResultMap">
+		<![CDATA[
+		-- 사용자 목록 검색
+		SELECT
+			user_id,
+			user_dept,
+			user_name,
+			user_rank,
+			user_position,
+			user_email,
+			CASE WHEN user_phone NOT LIKE '%-%' THEN REGEXP_REPLACE(user_phone, '(02|.{3})(.+)(.{4})', '\1-\2-\3')
+   			ELSE user_phone END AS user_phone
+		FROM
+		    (
+		        SELECT /*+ INDEX(T1 PK1) */
+		            ROWNUM AS RNUM, a.*
+		        FROM
+		            (SELECT * FROM TB_USER
+                    WHERE ${searchKey} LIKE '%' || #{searchValue} || '%'
+                    ORDER BY user_name) a
+		        WHERE
+		            ROWNUM <= #{end}
+		        ORDER BY user_name
+		    )
+		WHERE
+		    #{start} <= RNUM
+		]]>
+	</select>
+	
+	<select id="getUserListCnt" resultType="Integer">
+		-- 등록된 사용자수 조회 
+		SELECT COUNT(*) total
+		FROM tb_user	
+	</select>
+	
+	<select id="getSearchUserListCnt" resultType="Integer">
+		-- 등록된 사용자수 조회 
+		SELECT COUNT(*) total
+		FROM tb_user
+		WHERE ${searchKey} LIKE '%' || #{searchValue} || '%'
+	</select>
+	
+	<select id="getModifyUserById" resultMap="UserResultMap" parameterType="Map">
+		-- 선택된 사용자 정보 가져오기
+		SELECT
+			*
+		FROM TB_USER
+		WHERE user_id = #{userId, jdbcType=VARCHAR}
+	</select>
+	
+	<update id="setUserModify">
+		-- 사용자 수정
+		UPDATE TB_USER SET 
+		    user_first_name = #{userFirstName},
+		    user_middle_name = #{userMiddleName},
+		    user_name = #{userFirstName} || #{userMiddleName},
+		    user_pw = #{userPw},
+		    user_phone = #{userPhone},
+		    user_home_phone = #{userHomePhone},
+		    user_email = #{userEmail},
+		    user_zip_code = #{userZipCode},
+		    user_addr = #{userAddr},
+		    user_addr_detail = #{userAddrDetail},
+		    user_dept = #{userDept},
+		    user_rank = #{userRank},
+		    user_position = #{userPosition}
+		where user_id = #{userId}
+	</update>
+	
+	<delete id="userDelete">
+		-- 사용자 삭제
+		DELETE FROM tb_user WHERE user_id = #{userId, jdbcType=VARCHAR}
+	</delete>
+	
+	<select id="idCheck" parameterType="String" resultType="Integer">
+		-- 아이디 중복검사 ajax
+		SELECT COUNT(*) result
+		FROM TB_USER
+		WHERE USER_ID = #{userId}	
+	</select>
+	
+</mapper>
